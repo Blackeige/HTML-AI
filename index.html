@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Terminal AI Ollama</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 16px;
+      overflow: hidden;
+    }
+
+    #terminal {
+      padding: 10px;
+      height: 100vh;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .input-line {
+      display: inline;
+    }
+
+    input {
+      background: transparent;
+      border: none;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 16px;
+      width: 90%;
+      outline: none;
+    }
+
+    .error {
+      color: #f00; /* Rouge pour les messages d'erreur */
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal">
+    <div>> Bienvenue sur le terminal Ollama. Tape `ask <question>` pour interroger le LLM.</div>
+    <div class="input-line">&gt; <input type="text" id="command" autofocus></div>
+  </div>
+
+  <script>
+    const terminal = document.getElementById('terminal');
+    const input = document.getElementById('command');
+
+    function appendLine(text, isUser = false, isError = false) {
+      const line = document.createElement('div');
+      line.textContent = (isUser ? '> ' : '') + text;
+      if (isError) {
+        line.classList.add('error'); // Ajouter une classe d'erreur pour le texte rouge
+      }
+      terminal.insertBefore(line, document.querySelector('.input-line'));
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    async function sendToOllama(prompt) {
+      appendLine('[📡] Envoi à Ollama...', false);
+      try {
+        const res = await fetch('http://localhost:11434/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'tinyllama:1.1b-chat',
+            prompt: prompt,
+            stream: false // Pas de streaming, on attend la réponse complète
+          })
+        });
+
+        if (!res.ok) throw new Error(`[❌] Erreur HTTP ${res.status}`);
+
+        const json = await res.json();
+        appendLine('[✅] Réponse reçue :', false);
+        appendLine(json.response.trim(), false); // Affiche la réponse complète
+      } catch (err) {
+        appendLine(`[❌] Erreur : ${err.message}`, false, true); // Affiche l'erreur en rouge
+      }
+    }
+
+    input.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        const value = input.value.trim();
+        if (value) {
+          appendLine(value, true); // Affiche la commande de l'utilisateur
+          input.value = '';
+          if (value.toLowerCase().startsWith('ask ')) {
+            const prompt = value.slice(4).trim(); // Enlève 'ask' pour récupérer la question
+            await sendToOllama(prompt);
+          } else {
+            appendLine("[❓] Commande inconnue. Utilise 'ask <question>'", false);
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
