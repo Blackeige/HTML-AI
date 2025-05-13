@@ -68,7 +68,7 @@
           body: JSON.stringify({
             model: 'tinyllama:1.1b-chat',
             prompt: prompt,
-            stream: false // Pas de streaming, on attend la réponse complète
+            stream: true // Pas de streaming, on attend la réponse complète
           })
         });
 
